@@ -1,41 +1,39 @@
-# 第 3 周：Flow（规划与多 Agent 编排）
+# 第 3 周：记忆系统 (Memory System) 🧠
 
 ## 本周目标
-- 跑通 Planning Flow，理解“先计划、再执行、再标记状态”的闭环
-- 读懂 Flow 与 Agent 的职责边界：Flow 负责 orchestration，Agent 负责执行能力
-- 能做一个小改动：让不同类型 step 选择不同 executor agent
+- 理解 Agent 的“大脑”是如何存储对话历史的。
+- 掌握 `Message` 的四种角色 (`system`, `user`, `assistant`, `tool`) 及其数据结构。
+- 理解 `Memory` 类如何管理上下文窗口 (Context Window)。
+- 动手验证：手动构建 Memory 并观察 LLM 的反应。
 
 ## 推荐阅读顺序
-- `run_flow.py`
-- `app/flow/base.py`
-- `app/flow/planning.py`
-- `app/tool/planning.py`
+1. `app/schema.py` (重点关注 `Message` 类和 `Memory` 类)
+2. `app/agent/toolcall.py` (看 `act` 方法是如何往 memory 里写 `tool_message` 的)
+3. `app/llm.py` (看 `ask_tool` 是如何把 memory 转换成 LLM 请求的)
 
-## 本周关键点（必须搞懂）
-- PlanningFlow 如何创建 plan（LLM + PlanningTool）
-- 如何找到当前待执行 step，并标记 step_status
-- executor 的选择策略在哪里扩展（get_executor）
+## 本周关键点 (必须搞懂)
+- **Message 的多态性**: 为什么 `tool_calls` 和 `content` 可以同时存在？
+- **ToolMessage 的闭环**: 为什么 `tool_message` 必须包含 `tool_call_id`？
+- **上下文管理**: 当对话太长时，OpenManus 是怎么处理的？(查看 `Memory.add_message` 的截断逻辑)
 
-## 实战练习（本周主线）
-### 练习 A：改造 executor 选择
-目标：让计划 step 的类型（例如 `[SWE]`、`[SEARCH]`）映射到不同 agent 执行。
+## 实战练习 (本周主线)
 
-建议路径：
-- 在 plan step 文本中用 `[AGENT_NAME]` 或 `[TYPE]` 标记
-- 在 `get_executor(step_type=...)` 增加选择规则
-- 观察：不同 agent 的 available_tools 与 system_prompt 会如何影响执行风格
+### 练习 A: 手搓一段对话
+目标：不启动 Agent，直接使用 `Memory` 和 `LLM` 类来完成一次“伪造”的对话历史回放。
+1. 创建一个 `Memory` 实例。
+2. 手动塞入：
+   - System: "You are a calculator."
+   - User: "1+1=?"
+   - Assistant: (ToolCall: python_execute("1+1"))
+   - Tool: (Result: "2")
+3. 调用 `llm.ask_tool(memory.messages)`，看看 LLM 会不会回答 "The result is 2."
 
-### 练习 B：输出可追踪的执行结果
-目标：让你能从最终输出反向追踪每个 step 的执行过程。
-- 每个 step 的输出包含：step 文本、选择的 executor、执行结果摘要
+### 练习 B: 记忆压缩 (进阶)
+目标：给 Memory 增加一个 `summarize` 功能。
+- 当消息超过 10 条时，把前 5 条总结成一句话 "Previous summary: ..." 放在开头。
 
-## 每日安排（建议 1–2 小时/天）
-- Day 1：跑通 `python run_flow.py`，观察计划生成与执行循环
-- Day 2：精读 PlanningFlow.execute 与 step 状态机
-- Day 3–4：实现 executor 选择改造并跑通
-- Day 5：复盘：Flow 与 Agent 的边界与扩展点
-
-## 本周验收
-- 能解释：为什么需要 Flow（而不是只靠一个 Agent 步进）
-- 能完成一次“多 agent 分工”的端到端执行并可回放
-
+## 每日安排
+- **Day 1**: 精读 `app/schema.py`，理解 Message 和 Memory 的定义。
+- **Day 2**: 实战练习 A，手动构建对话链。
+- **Day 3-4**: 深入研究 `ToolCallAgent` 里的记忆读写逻辑。
+- **Day 5**: 总结与复盘。

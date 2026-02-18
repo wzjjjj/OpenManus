@@ -43,6 +43,8 @@ class ToolCallAgent(ReActAgent):
             self.messages += [user_msg]
 
         try:
+            # 打印to_params
+            logger.info(f"Available tools: {self.available_tools.to_params()}")
             # Get response with tool options
             response = await self.llm.ask_tool(
                 messages=self.messages,
